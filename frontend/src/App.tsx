@@ -1,51 +1,448 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { Plus, Trash2, Save } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+
+interface Phoneme {
+  symbol: string;
+  category: "consonant" | "vowel";
+}
+
+interface Word {
+  form: string;
+  meaning: string;
+}
+
+interface SoundChangeRule {
+  before: string;
+  after: string;
+  environment?: string;
+}
+
+const commonConsonants = [
+  "p",
+  "t",
+  "k",
+  "b",
+  "d",
+  "g",
+  "m",
+  "n",
+  "s",
+  "f",
+  "h",
+  "l",
+  "r",
+  "w",
+  "j",
+  "ʃ",
+  "ŋ",
+  "θ",
+];
+const commonVowels = ["a", "e", "i", "o", "u", "ɑ", "ɛ", "ɪ", "ɔ", "ʊ", "ə"];
 
 function App() {
-  const [backendStatus, setBackendStatus] = useState<string>(
-    "Checking backend...",
+  const [langName, setLangName] = useState("ProtoLingua");
+  const [phonemes, setPhonemes] = useState<Phoneme[]>([
+    { symbol: "p", category: "consonant" },
+    { symbol: "t", category: "consonant" },
+    { symbol: "k", category: "consonant" },
+    { symbol: "a", category: "vowel" },
+    { symbol: "i", category: "vowel" },
+  ]);
+  const [vocabulary, setVocabulary] = useState<Word[]>([
+    { form: "kata", meaning: "house" },
+    { form: "pani", meaning: "water" },
+    { form: "mira", meaning: "star" },
+  ]);
+  const [rules, setRules] = useState<SoundChangeRule[]>([
+    { before: "p", after: "f", environment: "_V" },
+  ]);
+
+  const [newPhoneme, setNewPhoneme] = useState("");
+  const [newPhonemeCat, setNewPhonemeCat] = useState<"consonant" | "vowel">(
+    "consonant",
   );
 
-  useEffect(() => {
-    fetch("http://localhost:8000/api/health")
-      .then((res) => res.json())
-      .then((data) => setBackendStatus(data.message))
-      .catch(() =>
-        setBackendStatus("❌ Cannot reach backend (is it running?)"),
-      );
-  }, []);
+  const [newWordForm, setNewWordForm] = useState("");
+  const [newWordMeaning, setNewWordMeaning] = useState("");
+
+  const [newRuleBefore, setNewRuleBefore] = useState("");
+  const [newRuleAfter, setNewRuleAfter] = useState("");
+  const [newRuleEnv, setNewRuleEnv] = useState("");
+
+  const [status, setStatus] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const addPhoneme = () => {
+    if (!newPhoneme.trim()) return;
+    if (phonemes.some((p) => p.symbol === newPhoneme.trim())) return;
+    setPhonemes([
+      ...phonemes,
+      { symbol: newPhoneme.trim(), category: newPhonemeCat },
+    ]);
+    setNewPhoneme("");
+  };
+
+  const removePhoneme = (index: number) =>
+    setPhonemes(phonemes.filter((_, i) => i !== index));
+
+  const addWord = () => {
+    if (!newWordForm.trim() || !newWordMeaning.trim()) return;
+    setVocabulary([
+      ...vocabulary,
+      { form: newWordForm.trim(), meaning: newWordMeaning.trim() },
+    ]);
+    setNewWordForm("");
+    setNewWordMeaning("");
+  };
+
+  const removeWord = (index: number) =>
+    setVocabulary(vocabulary.filter((_, i) => i !== index));
+
+  const addRule = () => {
+    if (!newRuleBefore.trim() || !newRuleAfter.trim()) return;
+    setRules([
+      ...rules,
+      {
+        before: newRuleBefore.trim(),
+        after: newRuleAfter.trim(),
+        environment: newRuleEnv.trim() || undefined,
+      },
+    ]);
+    setNewRuleBefore("");
+    setNewRuleAfter("");
+    setNewRuleEnv("");
+  };
+
+  const removeRule = (index: number) =>
+    setRules(rules.filter((_, i) => i !== index));
+
+  const saveProto = async () => {
+    if (!langName.trim()) {
+      setStatus("❌ Please give your language a name");
+      return;
+    }
+
+    setIsSaving(true);
+    const payload = { name: langName.trim(), phonemes, vocabulary, rules };
+
+    try {
+      const res = await fetch("http://localhost:8000/api/proto/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      setStatus(`✅ ${data.message}`);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (err) {
+      setStatus("❌ Could not reach backend. Is it running on port 8000?");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
-    <div
-      style={{ padding: "40px", fontFamily: "system-ui", textAlign: "center" }}
-    >
-      <h1 style={{ fontSize: "3rem", color: "#22c55e" }}>🌍 LinguaEvo</h1>
-      <p style={{ fontSize: "1.5rem", margin: "20px 0" }}>
-        The Evolutionary Language Simulator
-      </p>
-      <div
-        style={{
-          margin: "30px auto",
-          padding: "20px",
-          background: "#1f2937",
-          color: "#fff",
-          borderRadius: "12px",
-          maxWidth: "600px",
-        }}
-      >
-        <strong>Backend status:</strong>
-        <br />
-        {backendStatus}
+    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-slate-950 to-black overflow-hidden relative">
+      <div className="absolute inset-0 bg-[radial-gradient(#22c55e_0.8px,transparent_1px)] bg-[length:50px_50px] opacity-10" />
+
+      <div className="relative z-10 max-w-6xl mx-auto p-8">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between mb-12"
+        >
+          <div className="flex items-center gap-5">
+            <div className="w-16 h-16 bg-emerald-500/10 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-emerald-500/30">
+              <span className="text-5xl">🌌</span>
+            </div>
+            <div>
+              <h1 className="text-6xl font-bold bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent tracking-tighter">
+                LinguaEvo
+              </h1>
+              <p className="text-xl text-zinc-400 mt-1">
+                Evolutionary Language Laboratory
+              </p>
+            </div>
+          </div>
+          <div className="text-emerald-400 text-sm font-mono">
+            v0.1 • PROTO CREATOR
+          </div>
+        </motion.div>
+
+        {/* Language Name */}
+        <div className="mb-10">
+          <label className="block text-zinc-400 text-sm mb-2 font-medium">
+            LANGUAGE NAME
+          </label>
+          <input
+            type="text"
+            value={langName}
+            onChange={(e) => setLangName(e.target.value)}
+            className="w-full max-w-lg bg-zinc-900/70 backdrop-blur-xl border border-zinc-700 focus:border-emerald-500 rounded-3xl px-8 py-5 text-3xl font-light outline-none"
+            placeholder="e.g. Eldari, Zenthari..."
+          />
+        </div>
+
+        {/* Main Grid - Increased gap + better padding */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+          {/* Phoneme Inventory */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-emerald-500/20 rounded-2xl flex items-center justify-center">
+                <span className="text-2xl">🔤</span>
+              </div>
+              <h2 className="text-3xl font-semibold text-white">
+                Phoneme Inventory
+              </h2>
+            </div>
+
+            <div className="flex flex-wrap gap-3 mb-10 min-h-[140px]">
+              <AnimatePresence>
+                {phonemes.map((ph, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.8, opacity: 0 }}
+                    className="group bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-700 hover:border-emerald-500/50 px-6 py-3 rounded-2xl flex items-center gap-4 transition-all"
+                  >
+                    <span className="text-3xl font-mono text-emerald-300">
+                      {ph.symbol}
+                    </span>
+                    <span className="text-xs uppercase tracking-widest text-zinc-500">
+                      {ph.category}
+                    </span>
+                    <button
+                      onClick={() => removePhoneme(i)}
+                      className="ml-auto opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-500"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
+            <div className="flex gap-3">
+              <input
+                type="text"
+                placeholder="Phoneme (e.g. ʃ, ŋ, ə)"
+                value={newPhoneme}
+                onChange={(e) => setNewPhoneme(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addPhoneme()}
+                className="flex-1 bg-zinc-900/70 border border-zinc-700 focus:border-cyan-400 rounded-2xl px-6 py-4 text-lg outline-none"
+              />
+              <select
+                value={newPhonemeCat}
+                onChange={(e) =>
+                  setNewPhonemeCat(e.target.value as "consonant" | "vowel")
+                }
+                className="bg-zinc-900/70 border border-zinc-700 rounded-2xl px-5 py-4 text-zinc-300"
+              >
+                <option value="consonant">Consonant</option>
+                <option value="vowel">Vowel</option>
+              </select>
+              <button
+                onClick={addPhoneme}
+                className="bg-emerald-600 hover:bg-emerald-500 px-4 rounded-2xl flex items-center gap-3 transition-all active:scale-95 min-h-[56px] whitespace-nowrap"
+              >
+                <Plus size={24} />
+              </button>
+            </div>
+
+            <div className="mt-6 text-xs text-zinc-500 flex flex-wrap gap-x-4">
+              Quick:{" "}
+              {[...commonConsonants, ...commonVowels].slice(0, 14).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setNewPhoneme(s)}
+                  className="hover:text-emerald-400 font-mono transition-colors"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Starter Vocabulary */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-cyan-500/20 rounded-2xl flex items-center justify-center">
+                <span className="text-2xl">📖</span>
+              </div>
+              <h2 className="text-3xl font-semibold text-white">
+                Starter Vocabulary
+              </h2>
+            </div>
+
+            <div className="space-y-4 mb-10 max-h-80 overflow-y-auto pr-2 custom-scroll">
+              <AnimatePresence>
+                {vocabulary.map((w, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex justify-between items-center bg-zinc-900/70 border border-zinc-700 hover:border-cyan-500/30 px-6 py-4 rounded-2xl group"
+                  >
+                    <div className="flex-1">
+                      <span className="font-mono text-2xl text-white">
+                        {w.form}
+                      </span>
+                      <span className="ml-6 text-zinc-400">→ {w.meaning}</span>
+                    </div>
+                    <button
+                      onClick={() => removeWord(i)}
+                      className="text-red-400 hover:text-red-500 opacity-60 group-hover:opacity-100"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
+            <div className="flex gap-3">
+              <input
+                placeholder="Word (kata)"
+                value={newWordForm}
+                onChange={(e) => setNewWordForm(e.target.value)}
+                className="flex-1 bg-zinc-900/70 border border-zinc-700 focus:border-cyan-400 rounded-2xl px-2 py-4 outline-none"
+              />
+              <input
+                placeholder="Meaning (house)"
+                value={newWordMeaning}
+                onChange={(e) => setNewWordMeaning(e.target.value)}
+                className="flex-1 bg-zinc-900/70 border border-zinc-700 focus:border-cyan-400 rounded-2xl px-2 py-4 outline-none"
+              />
+              <button
+                onClick={addWord}
+                className="bg-cyan-600 hover:bg-cyan-500 px-4 rounded-2xl flex items-center gap-3 transition-all active:scale-95 min-h-[56px]"
+              >
+                <Plus size={24} />
+              </button>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Sound Change Rules - More top margin */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mt-12 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-purple-500/20 rounded-2xl flex items-center justify-center">
+              <span className="text-2xl">🔄</span>
+            </div>
+            <h2 className="text-3xl font-semibold text-white">
+              Sound Change Rules
+            </h2>
+          </div>
+
+          <div className="space-y-4 mb-8">
+            <AnimatePresence>
+              {rules.map((rule, i) => (
+                <motion.div
+                  key={i}
+                  className="flex items-center gap-6 bg-zinc-900/70 border border-zinc-700 px-8 py-5 rounded-2xl group"
+                >
+                  <div className="font-mono text-2xl flex items-center gap-4">
+                    <span className="text-orange-300">{rule.before}</span>
+                    <span className="text-zinc-500">→</span>
+                    <span className="text-emerald-300">{rule.after}</span>
+                    {rule.environment && (
+                      <span className="text-zinc-500 text-base">
+                        / {rule.environment}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => removeRule(i)}
+                    className="ml-auto text-red-400 hover:text-red-500 opacity-60 group-hover:opacity-100"
+                  >
+                    <Trash2 size={22} />
+                  </button>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
+          <div className="flex flex-wrap gap-4">
+            <input
+              placeholder="Before"
+              value={newRuleBefore}
+              onChange={(e) => setNewRuleBefore(e.target.value)}
+              className="w-32 bg-zinc-900/70 border border-zinc-700 focus:border-purple-400 rounded-2xl px-6 py-4 text-center font-mono text-xl"
+            />
+            <div className="flex items-center text-3xl text-zinc-600">→</div>
+            <input
+              placeholder="After"
+              value={newRuleAfter}
+              onChange={(e) => setNewRuleAfter(e.target.value)}
+              className="w-32 bg-zinc-900/70 border border-zinc-700 focus:border-purple-400 rounded-2xl px-6 py-4 text-center font-mono text-xl"
+            />
+            <input
+              placeholder="Environment (optional)"
+              value={newRuleEnv}
+              onChange={(e) => setNewRuleEnv(e.target.value)}
+              className="flex-1 bg-zinc-900/70 border border-zinc-700 focus:border-purple-400 rounded-2xl px-6 py-4"
+            />
+            <button
+              onClick={addRule}
+              className="bg-purple-600 hover:bg-purple-500 px-10 rounded-2xl flex items-center gap-3 transition-all active:scale-95 min-h-[56px]"
+            >
+              <Plus size={24} /> Add Rule
+            </button>
+          </div>
+          <p className="mt-4 text-xs text-zinc-500">
+            Example: p → f / _V means "p becomes f before any vowel"
+          </p>
+        </motion.div>
+
+        {/* Big Save Button */}
+        <div className="flex justify-center mt-16">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={saveProto}
+            disabled={isSaving}
+            className="group relative bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-black font-semibold text-2xl px-16 py-6 rounded-3xl flex items-center gap-4 shadow-2xl shadow-emerald-500/30 transition-all disabled:opacity-70"
+          >
+            <Save
+              size={32}
+              className="group-hover:rotate-12 transition-transform"
+            />
+            {isSaving
+              ? "Saving to Evolution Engine..."
+              : "Save Proto-Language & Initialize"}
+          </motion.button>
+        </div>
+
+        <AnimatePresence>
+          {status && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="mt-8 max-w-2xl mx-auto text-center text-lg font-medium bg-zinc-900/80 backdrop-blur-xl border border-emerald-900/50 p-6 rounded-3xl"
+            >
+              {status}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-      <p style={{ color: "#64748b" }}>
-        Backend running on port 8000
-        <br />
-        Frontend running on port 5173
-      </p>
-      <p style={{ marginTop: "40px", fontSize: "1.1rem" }}>
-        🎉 Project skeleton is ready!
-        <br />
-        Next step: Proto-Language Creator
-      </p>
     </div>
   );
 }
