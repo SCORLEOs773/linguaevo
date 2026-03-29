@@ -45,6 +45,8 @@ function App() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [evolvedWords, setEvolvedWords] = useState<any[]>([]);
   const [currentVocabulary, setCurrentVocabulary] = useState<Word[]>([]);
+  const [generations, setGenerations] = useState<any[]>([]); // array of evolution stages
+  const [selectedGeneration, setSelectedGeneration] = useState<number>(0);
   const [phonemes, setPhonemes] = useState<Phoneme[]>([
     { symbol: "p", category: "consonant" },
     { symbol: "t", category: "consonant" },
@@ -145,18 +147,20 @@ function App() {
     }
   };
 
-  const evolveLanguage = async (fromCurrent = false) => {
+  const evolveLanguage = async (continueFromCurrent: boolean = false) => {
     if (!langName.trim()) {
       setStatus("❌ Please save the proto-language first");
       return;
     }
 
-    let vocabToEvolve = vocabulary;
+    let vocabToUse = vocabulary;
 
-    // If "Evolve Again" is clicked, use the latest evolved vocabulary
-    if (fromCurrent && currentVocabulary.length > 0) {
-      vocabToEvolve = currentVocabulary.map((item) => ({
-        form: item.form, // Use evolved form as new "original"
+    // If continuing evolution, use the latest generation
+    if (continueFromCurrent && generations.length > 0) {
+      const latest = generations[generations.length - 1];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vocabToUse = latest.evolved_vocabulary.map((item: any) => ({
+        form: item.evolved,
         meaning: item.meaning,
       }));
     }
@@ -164,7 +168,7 @@ function App() {
     const payload = {
       name: langName.trim(),
       phonemes,
-      vocabulary: vocabToEvolve,
+      vocabulary: vocabToUse,
       rules,
     };
 
@@ -177,18 +181,18 @@ function App() {
       const data = await res.json();
 
       if (data.evolved_vocabulary) {
+        const newGeneration = {
+          generation: generations.length + 1,
+          evolved_vocabulary: data.evolved_vocabulary,
+          timestamp: new Date().toLocaleTimeString(),
+        };
+
+        const updatedGenerations = [...generations, newGeneration];
+        setGenerations(updatedGenerations);
         setEvolvedWords(data.evolved_vocabulary);
+        setSelectedGeneration(updatedGenerations.length - 1);
 
-        // Update current vocabulary for next evolution
-        setCurrentVocabulary(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          data.evolved_vocabulary.map((item: any) => ({
-            form: item.evolved,
-            meaning: item.meaning,
-          })),
-        );
-
-        setStatus(`✅ Evolution complete! Generation ${data.generation || 1}`);
+        setStatus(`✅ Generation ${newGeneration.generation} created!`);
       }
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
@@ -496,7 +500,7 @@ function App() {
           </p>
         </motion.div>
 
-        {/* Evolution Results Section */}
+        {/* Evolution Family Tree & Results */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -504,33 +508,63 @@ function App() {
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 bg-amber-500/20 rounded-2xl flex items-center justify-center">
-              <span className="text-2xl">⏳</span>
+              <span className="text-2xl">🌳</span>
             </div>
             <h2 className="text-3xl font-semibold text-white">
-              Evolution Results
+              Language Family Tree
             </h2>
           </div>
 
+          {/* Evolution Buttons */}
           <div className="flex gap-4 mb-8">
             <button
               onClick={() => evolveLanguage(false)}
               className="flex-1 bg-amber-600 hover:bg-amber-500 px-10 py-4 rounded-2xl flex items-center justify-center gap-3 text-lg font-medium transition-all active:scale-95"
             >
-              <Play size={24} /> Evolve 100 Years
+              <Play size={24} /> Evolve 100 Years (New Branch)
             </button>
 
             <button
               onClick={() => evolveLanguage(true)}
-              disabled={evolvedWords.length === 0}
+              disabled={generations.length === 0}
               className="flex-1 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 px-10 py-4 rounded-2xl flex items-center justify-center gap-3 text-lg font-medium transition-all active:scale-95"
             >
-              Evolve Again
+              Evolve Current Branch
             </button>
           </div>
 
+          {/* Family Tree Navigation */}
+          {generations.length > 0 && (
+            <div className="mb-8">
+              <p className="text-zinc-400 mb-3">Generations:</p>
+              <div className="flex flex-wrap gap-2">
+                {generations.map((gen, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setSelectedGeneration(index);
+                      setEvolvedWords(gen.evolved_vocabulary);
+                    }}
+                    className={`px-5 py-2 rounded-2xl text-sm transition-all ${
+                      selectedGeneration === index
+                        ? "bg-amber-600 text-black font-medium"
+                        : "bg-zinc-800 hover:bg-zinc-700 text-zinc-300"
+                    }`}
+                  >
+                    Gen {gen.generation} {index === 0 ? "(First)" : ""}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Current Generation Display */}
           {evolvedWords.length > 0 && (
             <div className="space-y-6">
-              <h3 className="text-xl text-amber-400">After Evolution:</h3>
+              <h3 className="text-xl text-amber-400">
+                Generation {selectedGeneration + 1} •{" "}
+                {generations[selectedGeneration]?.timestamp}
+              </h3>
               <div className="grid grid-cols-1 gap-4">
                 {evolvedWords.map((item, index) => (
                   <div
@@ -542,21 +576,21 @@ function App() {
                         <button
                           onClick={() => speakWord(item.original, false)}
                           className="text-zinc-400 hover:text-white transition-colors"
-                          title="Hear original"
+                          title="Hear original form"
                         >
                           🔊
                         </button>
                         <span className="font-mono text-xl line-through text-zinc-500">
                           {item.original}
                         </span>
-                        <span className="text-amber-400">→</span>
+                        <span className="text-amber-400 mx-2">→</span>
                         <span className="font-mono text-xl text-white">
                           {item.evolved}
                         </span>
                         <button
                           onClick={() => speakWord(item.evolved, true)}
                           className="text-amber-400 hover:text-amber-300 transition-colors"
-                          title="Hear evolved"
+                          title="Hear evolved form"
                         >
                           🔊
                         </button>
@@ -567,6 +601,13 @@ function App() {
                 ))}
               </div>
             </div>
+          )}
+
+          {generations.length === 0 && (
+            <p className="text-zinc-500 text-center py-12">
+              Click "Evolve 100 Years" to start growing your language family
+              tree
+            </p>
           )}
         </motion.div>
 
