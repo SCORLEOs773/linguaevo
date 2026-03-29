@@ -2,12 +2,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .models import ProtoLanguage
 from typing import List, Dict
+import os
 
 app = FastAPI(title="LinguaEvo API", version="0.3.0")
 
+FRONTEND_URL = os.getenv("https://linguaevo.netlify.app", "http://localhost:5173")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

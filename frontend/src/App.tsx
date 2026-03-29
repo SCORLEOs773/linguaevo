@@ -2,6 +2,10 @@ import { useState } from "react";
 import { Plus, Trash2, Save, Play, HelpCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const API_BASE = import.meta.env.PROD
+  ? "https://linguaevo.onrender.com"
+  : "http://localhost:8000";
+
 interface Phoneme {
   symbol: string;
   category: "consonant" | "vowel";
@@ -146,7 +150,7 @@ function App() {
     const payload = { name: langName.trim(), phonemes, vocabulary, rules };
 
     try {
-      const res = await fetch("http://localhost:8000/api/proto/create", {
+      const res = await fetch(`${API_BASE}/api/proto/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -188,14 +192,11 @@ function App() {
     };
 
     try {
-      const res = await fetch(
-        `http://localhost:8000/api/proto/create?passes=${passes}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
-      );
+      const res = await fetch(`${API_BASE}/api/proto/create?passes=${passes}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       const data = await res.json();
 
       if (data.evolved_vocabulary) {
