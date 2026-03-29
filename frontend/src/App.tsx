@@ -44,12 +44,12 @@ function App() {
   const [langName, setLangName] = useState("ProtoLingua");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [evolvedWords, setEvolvedWords] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [currentVocabulary, setCurrentVocabulary] = useState<Word[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [generations, setGenerations] = useState<any[]>([]); // array of evolution stages
+  const [generations, setGenerations] = useState<any[]>([]);
   const [selectedGeneration, setSelectedGeneration] = useState<number>(0);
   const [isEvolving, setIsEvolving] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(true);
+
   const [phonemes, setPhonemes] = useState<Phoneme[]>([
     { symbol: "p", category: "consonant" },
     { symbol: "t", category: "consonant" },
@@ -57,11 +57,13 @@ function App() {
     { symbol: "a", category: "vowel" },
     { symbol: "i", category: "vowel" },
   ]);
+
   const [vocabulary, setVocabulary] = useState<Word[]>([
     { form: "kata", meaning: "house" },
     { form: "pani", meaning: "water" },
     { form: "mira", meaning: "star" },
   ]);
+
   const [rules, setRules] = useState<SoundChangeRule[]>([
     { before: "p", after: "f", environment: "_V" },
   ]);
@@ -70,10 +72,8 @@ function App() {
   const [newPhonemeCat, setNewPhonemeCat] = useState<"consonant" | "vowel">(
     "consonant",
   );
-
   const [newWordForm, setNewWordForm] = useState("");
   const [newWordMeaning, setNewWordMeaning] = useState("");
-
   const [newRuleBefore, setNewRuleBefore] = useState("");
   const [newRuleAfter, setNewRuleAfter] = useState("");
   const [newRuleEnv, setNewRuleEnv] = useState("");
@@ -81,12 +81,7 @@ function App() {
   const [status, setStatus] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  const [showOnboarding, setShowOnboarding] = useState(true);
-
-  // Multi-pass selector (centuries → passes)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [passes, setPasses] = useState(3); // 3 passes ≈ 100 years
-
+  // Time selector for multi-pass evolution
   const [selectedTime, setSelectedTime] = useState<"100" | "300" | "500">(
     "100",
   );
@@ -235,7 +230,6 @@ function App() {
   };
 
   const loadLatinExample = () => {
-    // Latin phonemes
     setPhonemes([
       { symbol: "p", category: "consonant" },
       { symbol: "t", category: "consonant" },
@@ -255,13 +249,11 @@ function App() {
       { symbol: "u", category: "vowel" },
     ]);
 
-    // Famous Latin starter vocabulary (good for showing evolution)
     setVocabulary([
       { form: "pater", meaning: "father" },
       { form: "mater", meaning: "mother" },
       { form: "frater", meaning: "brother" },
       { form: "noctem", meaning: "night" },
-      { form: "lactem", meaning: "milk" },
       { form: "cantare", meaning: "to sing" },
       { form: "caballum", meaning: "horse" },
       { form: "vinum", meaning: "wine" },
@@ -269,13 +261,11 @@ function App() {
       { form: "domus", meaning: "house" },
     ]);
 
-    // Realistic Latin sound changes (simplified but educational)
     setRules([
-      { before: "p", after: "f", environment: "_V" }, // p → f before vowel (like in French)
-      { before: "t", after: "d", environment: "V_" }, // intervocalic t → d
-      { before: "k", after: "ʃ", environment: "_V" }, // k → sh/ch sound (like in French/Spanish)
-      { before: "ct", after: "t", environment: "" }, // ct → t (noctem → nuit)
-      { before: "gn", after: "ɲ", environment: "" }, // gn → ny sound
+      { before: "p", after: "f", environment: "_V" },
+      { before: "t", after: "d", environment: "V_" },
+      { before: "k", after: "ʃ", environment: "_V" },
+      { before: "ct", after: "t", environment: "" },
     ]);
 
     setLangName("Latin");
@@ -284,38 +274,23 @@ function App() {
     setSelectedGeneration(0);
     setShowOnboarding(false);
     setStatus(
-      "✅ Latin example loaded! Now click 'Evolve 100 Years' to see real historical evolution.",
+      "✅ Latin example loaded! Click 'Evolve 100 Years' to see real historical evolution.",
     );
   };
 
-  // Speak a word using browser TTS
   const speakWord = (word: string, isEvolved: boolean = false) => {
     if (!("speechSynthesis" in window)) {
       alert("Your browser doesn't support text-to-speech.");
       return;
     }
-
     const utterance = new SpeechSynthesisUtterance(word);
-
-    // Make evolved version sound slightly different (older/future feel)
     if (isEvolved) {
-      utterance.pitch = 1.1; // slightly higher pitch
-      utterance.rate = 0.95; // slightly slower
+      utterance.pitch = 1.1;
+      utterance.rate = 0.95;
     } else {
       utterance.pitch = 1.0;
       utterance.rate = 1.05;
     }
-
-    // Try to use a nice voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const goodVoice = voices.find(
-      (v) =>
-        v.name.includes("Google") ||
-        v.name.includes("Samantha") ||
-        v.lang.startsWith("en"),
-    );
-    if (goodVoice) utterance.voice = goodVoice;
-
     window.speechSynthesis.speak(utterance);
   };
 
@@ -327,9 +302,9 @@ function App() {
 
     const exportData = {
       name: langName,
-      phonemes: phonemes,
-      rules: rules,
-      generations: generations,
+      phonemes,
+      rules,
+      generations,
       exportedAt: new Date().toISOString(),
     };
 
@@ -374,43 +349,33 @@ function App() {
                 <div>
                   <strong>What is this?</strong>
                   <br />A tool that lets you create a starting language and
-                  watch it evolve naturally over time, just like real languages
+                  watch it evolve naturally over time — just like real languages
                   (Latin → French/Spanish/Italian).
                 </div>
-
                 <div>
                   <strong>How to use it:</strong>
                   <ol className="list-decimal pl-5 mt-2 space-y-1">
                     <li>
-                      Fill <strong>Phoneme Inventory</strong>,{" "}
-                      <strong>Starter Vocabulary</strong>, and{" "}
-                      <strong>Sound Change Rules</strong>
+                      Fill Phoneme Inventory, Starter Vocabulary, and Sound
+                      Change Rules
                     </li>
                     <li>
-                      Click <strong>“Load Latin Example”</strong> to see real
-                      historical evolution in action
+                      Click “Load Latin Example” to see real history in action
                     </li>
                     <li>
-                      Choose how many years to simulate using the{" "}
-                      <strong>100 / 300 / 500 years</strong> buttons
+                      Choose how many years to simulate using the 100 / 300 /
+                      500 years buttons
                     </li>
-                    <li>
-                      Click <strong>“Evolve X Years”</strong> to advance time
-                    </li>
+                    <li>Click “Evolve X Years” to advance time</li>
                     <li>
                       Use the speaker icons 🔊 to hear words at different stages
                     </li>
-                    <li>
-                      Switch between generations using the tree buttons above
-                      the words
-                    </li>
+                    <li>Switch between generations using the tree buttons</li>
                   </ol>
                 </div>
-
                 <div className="bg-zinc-800/50 p-4 rounded-2xl text-sm">
                   <strong>💡 Tip:</strong> More years = bigger changes. Start
-                  with 100 years to see gradual evolution, then use "Evolve
-                  Again" to continue.
+                  with 100 years for gradual evolution.
                 </div>
               </div>
 
@@ -436,6 +401,7 @@ function App() {
         )}
       </AnimatePresence>
 
+      {/* Background */}
       <div className="absolute inset-0 bg-[radial-gradient(#22c55e_0.8px,transparent_1px)] bg-[length:50px_50px] opacity-10" />
 
       <div className="relative z-10 max-w-6xl mx-auto p-8">
@@ -450,7 +416,7 @@ function App() {
               <span className="text-5xl">🌌</span>
             </div>
             <div>
-              <h1 className="text-6xl pb-3 font-bold bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent tracking-tighter">
+              <h1 className="text-6xl font-bold bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent tracking-tighter">
                 LinguaEvo
               </h1>
               <p className="text-xl text-zinc-400 mt-1">
@@ -478,7 +444,7 @@ function App() {
             type="text"
             value={langName}
             onChange={(e) => setLangName(e.target.value)}
-            className="w-full max-w-lg text-emerald-400 bg-zinc-900/70 backdrop-blur-xl border border-zinc-700 focus:border-emerald-500 rounded-3xl px-8 py-5 text-3xl font-light outline-none"
+            className="w-full text-emerald-400 max-w-lg bg-zinc-900/70 backdrop-blur-xl border border-zinc-700 focus:border-emerald-500 rounded-3xl px-8 py-5 text-3xl font-light outline-none"
             placeholder="e.g. Eldari, Zenthari..."
           />
         </div>
