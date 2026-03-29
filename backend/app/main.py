@@ -6,11 +6,18 @@ import os
 
 app = FastAPI(title="LinguaEvo API", version="0.3.0")
 
-FRONTEND_URL = os.getenv("https://linguaevo.netlify.app", "http://localhost:5173")
+frontend_url = os.getenv("FRONTEND_URL")
+
+origins = [
+    "http://localhost:5173",
+]
+
+if frontend_url:
+    origins.append(frontend_url)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", FRONTEND_URL],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
