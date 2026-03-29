@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2, Save, Play } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Phoneme {
@@ -42,6 +42,8 @@ const commonVowels = ["a", "e", "i", "o", "u", "ɑ", "ɛ", "ɪ", "ɔ", "ʊ", "ə
 
 function App() {
   const [langName, setLangName] = useState("ProtoLingua");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [evolvedWords, setEvolvedWords] = useState<any[]>([]);
   const [phonemes, setPhonemes] = useState<Phoneme[]>([
     { symbol: "p", category: "consonant" },
     { symbol: "t", category: "consonant" },
@@ -139,6 +141,39 @@ function App() {
       setStatus("❌ Could not reach backend. Is it running on port 8000?");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const evolveLanguage = async () => {
+    if (!langName.trim()) {
+      setStatus("❌ Please save the proto-language first");
+      return;
+    }
+
+    const payload = {
+      name: langName.trim(),
+      phonemes,
+      vocabulary,
+      rules,
+    };
+
+    try {
+      const res = await fetch("http://localhost:8000/api/proto/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (data.evolved_vocabulary) {
+        setEvolvedWords(data.evolved_vocabulary);
+        setStatus(
+          `✅ Evolution complete! ${data.evolved_vocabulary.length} words updated.`,
+        );
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (err) {
+      setStatus("❌ Could not connect to evolution engine.");
     }
   };
 
@@ -409,6 +444,54 @@ function App() {
           <p className="mt-4 text-xs text-zinc-500">
             Example: p → f / _V means "p becomes f before any vowel"
           </p>
+        </motion.div>
+
+        {/* Evolution Results Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-12 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-amber-500/20 rounded-2xl flex items-center justify-center">
+              <span className="text-2xl">⏳</span>
+            </div>
+            <h2 className="text-3xl font-semibold text-white">
+              Evolution Results
+            </h2>
+          </div>
+
+          <button
+            onClick={evolveLanguage}
+            className="mb-8 bg-amber-600 hover:bg-amber-500 px-10 py-4 rounded-2xl flex items-center gap-3 text-lg font-medium transition-all active:scale-95"
+          >
+            <Play size={24} /> Evolve 100 Years
+          </button>
+
+          {evolvedWords.length > 0 && (
+            <div className="space-y-6">
+              <h3 className="text-xl text-amber-400">After Evolution:</h3>
+              <div className="grid grid-cols-1 gap-4">
+                {evolvedWords.map((item, index) => (
+                  <div
+                    key={index}
+                    className="bg-zinc-900/70 border border-amber-500/30 p-5 rounded-2xl flex justify-between items-center"
+                  >
+                    <div>
+                      <span className="font-mono text-xl line-through text-zinc-500">
+                        {item.original}
+                      </span>
+                      <span className="mx-4 text-amber-400">→</span>
+                      <span className="font-mono text-xl text-white">
+                        {item.evolved}
+                      </span>
+                    </div>
+                    <span className="text-zinc-400">({item.meaning})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </motion.div>
 
         {/* Big Save Button */}

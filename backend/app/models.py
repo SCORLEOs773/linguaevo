@@ -1,9 +1,9 @@
 from pydantic import BaseModel
-from typing import List, Dict, Optional
+from typing import List, Optional
 
 class Phoneme(BaseModel):
     symbol: str
-    category: str  # "consonant" or "vowel"
+    category: str
 
 class Word(BaseModel):
     form: str
@@ -12,7 +12,7 @@ class Word(BaseModel):
 class SoundChangeRule(BaseModel):
     before: str
     after: str
-    environment: Optional[str] = None  # e.g., "_V" for before vowel
+    environment: Optional[str] = None
 
 class ProtoLanguage(BaseModel):
     name: str
