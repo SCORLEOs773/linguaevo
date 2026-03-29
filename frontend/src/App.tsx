@@ -245,6 +245,34 @@ function App() {
     window.speechSynthesis.speak(utterance);
   };
 
+  const exportLanguage = () => {
+    if (generations.length === 0) {
+      setStatus("❌ Evolve the language at least once before exporting");
+      return;
+    }
+
+    const exportData = {
+      name: langName,
+      phonemes: phonemes,
+      rules: rules,
+      generations: generations,
+      exportedAt: new Date().toISOString(),
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${langName.toLowerCase()}_linguaevo.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setStatus(`✅ Exported ${langName} language family successfully!`);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-slate-950 to-black overflow-hidden relative">
       <div className="absolute inset-0 bg-[radial-gradient(#22c55e_0.8px,transparent_1px)] bg-[length:50px_50px] opacity-10" />
@@ -514,7 +542,7 @@ function App() {
           </p>
         </motion.div>
 
-        {/* Language Family Tree & Results */}
+        {/* Language Family Tree & Results - Final Version */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -529,12 +557,21 @@ function App() {
                 Language Family Tree
               </h2>
             </div>
-            <button
-              onClick={resetEvolution}
-              className="text-red-400 hover:text-red-500 text-sm px-4 py-2 rounded-xl border border-red-900/50 hover:border-red-500 transition-all"
-            >
-              Reset Tree
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={resetEvolution}
+                className="text-red-400 hover:text-red-500 text-sm px-5 py-2 rounded-xl border border-red-900/50 hover:border-red-500 transition-all"
+              >
+                Reset Tree
+              </button>
+              <button
+                onClick={exportLanguage}
+                disabled={generations.length === 0}
+                className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-black px-6 py-2 rounded-xl text-sm font-medium transition-all"
+              >
+                Export Language
+              </button>
+            </div>
           </div>
 
           {/* Evolution Buttons */}
@@ -594,13 +631,13 @@ function App() {
                 {evolvedWords.map((item, index) => (
                   <div
                     key={index}
-                    className="bg-zinc-900/70 border border-amber-500/30 p-6 rounded-2xl flex justify-between items-center"
+                    className="bg-zinc-900/70 border border-amber-500/30 p-6 rounded-2xl flex justify-between items-center group"
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-4">
                         <button
                           onClick={() => speakWord(item.original, false)}
-                          className="text-zinc-400 hover:text-white transition-colors text-2xl"
+                          className="text-zinc-400 hover:text-white transition-colors text-2xl opacity-70 group-hover:opacity-100"
                           title="Hear original"
                         >
                           🔊
@@ -614,7 +651,7 @@ function App() {
                         </span>
                         <button
                           onClick={() => speakWord(item.evolved, true)}
-                          className="text-amber-400 hover:text-amber-300 transition-colors text-2xl"
+                          className="text-amber-400 hover:text-amber-300 transition-colors text-2xl opacity-70 group-hover:opacity-100"
                           title="Hear evolved"
                         >
                           🔊
@@ -635,7 +672,7 @@ function App() {
               <div className="text-6xl mb-4">🌱</div>
               <p className="text-xl">Your language family tree is empty</p>
               <p className="mt-2">
-                Click "Evolve 100 Years" to begin growing it
+                Click "Evolve 100 Years" to begin simulation
               </p>
             </div>
           )}
