@@ -49,6 +49,7 @@ function App() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [generations, setGenerations] = useState<any[]>([]); // array of evolution stages
   const [selectedGeneration, setSelectedGeneration] = useState<number>(0);
+  const [isEvolving, setIsEvolving] = useState(false);
   const [phonemes, setPhonemes] = useState<Phoneme[]>([
     { symbol: "p", category: "consonant" },
     { symbol: "t", category: "consonant" },
@@ -155,9 +156,9 @@ function App() {
       return;
     }
 
+    setIsEvolving(true);
     let vocabToUse = vocabulary;
 
-    // If continuing evolution, use the latest generation
     if (continueFromCurrent && generations.length > 0) {
       const latest = generations[generations.length - 1];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -194,12 +195,23 @@ function App() {
         setEvolvedWords(data.evolved_vocabulary);
         setSelectedGeneration(updatedGenerations.length - 1);
 
-        setStatus(`✅ Generation ${newGeneration.generation} created!`);
+        setStatus(
+          `✅ Generation ${newGeneration.generation} created successfully!`,
+        );
       }
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       setStatus("❌ Could not connect to evolution engine.");
+    } finally {
+      setIsEvolving(false);
     }
+  };
+
+  const resetEvolution = () => {
+    setGenerations([]);
+    setEvolvedWords([]);
+    setSelectedGeneration(0);
+    setStatus("Evolution tree reset. Ready for new simulation.");
   };
 
   // Speak a word using browser TTS
@@ -502,43 +514,53 @@ function App() {
           </p>
         </motion.div>
 
-        {/* Evolution Family Tree & Results */}
+        {/* Language Family Tree & Results */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           className="mt-12 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl"
         >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-amber-500/20 rounded-2xl flex items-center justify-center">
-              <span className="text-2xl">🌳</span>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-500/20 rounded-2xl flex items-center justify-center">
+                <span className="text-2xl">🌳</span>
+              </div>
+              <h2 className="text-3xl font-semibold text-white">
+                Language Family Tree
+              </h2>
             </div>
-            <h2 className="text-3xl font-semibold text-white">
-              Language Family Tree
-            </h2>
+            <button
+              onClick={resetEvolution}
+              className="text-red-400 hover:text-red-500 text-sm px-4 py-2 rounded-xl border border-red-900/50 hover:border-red-500 transition-all"
+            >
+              Reset Tree
+            </button>
           </div>
 
           {/* Evolution Buttons */}
           <div className="flex gap-4 mb-8">
             <button
               onClick={() => evolveLanguage(false)}
-              className="flex-1 bg-amber-600 hover:bg-amber-500 px-10 py-4 rounded-2xl flex items-center justify-center gap-3 text-lg font-medium transition-all active:scale-95"
+              disabled={isEvolving}
+              className="flex-1 bg-amber-600 hover:bg-amber-500 disabled:opacity-70 px-10 py-4 rounded-2xl flex items-center justify-center gap-3 text-lg font-medium transition-all active:scale-95"
             >
-              <Play size={24} /> Evolve 100 Years (New Branch)
+              <Play size={24} />
+              {isEvolving ? "Evolving..." : "Evolve 100 Years (New Branch)"}
             </button>
 
             <button
               onClick={() => evolveLanguage(true)}
-              disabled={generations.length === 0}
+              disabled={isEvolving || generations.length === 0}
               className="flex-1 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 px-10 py-4 rounded-2xl flex items-center justify-center gap-3 text-lg font-medium transition-all active:scale-95"
             >
-              Evolve Current Branch
+              {isEvolving ? "Evolving..." : "Evolve Current Branch"}
             </button>
           </div>
 
-          {/* Family Tree Navigation */}
+          {/* Generation Navigation */}
           {generations.length > 0 && (
             <div className="mb-8">
-              <p className="text-zinc-400 mb-3">Generations:</p>
+              <p className="text-zinc-400 mb-3 text-sm">Select Generation:</p>
               <div className="flex flex-wrap gap-2">
                 {generations.map((gen, index) => (
                   <button
@@ -547,13 +569,13 @@ function App() {
                       setSelectedGeneration(index);
                       setEvolvedWords(gen.evolved_vocabulary);
                     }}
-                    className={`px-5 py-2 rounded-2xl text-sm transition-all ${
+                    className={`px-6 py-2.5 rounded-2xl text-sm font-medium transition-all ${
                       selectedGeneration === index
-                        ? "bg-amber-600 text-black font-medium"
+                        ? "bg-amber-600 text-black"
                         : "bg-zinc-800 hover:bg-zinc-700 text-zinc-300"
                     }`}
                   >
-                    Gen {gen.generation} {index === 0 ? "(First)" : ""}
+                    Gen {gen.generation}
                   </button>
                 ))}
               </div>
@@ -565,40 +587,43 @@ function App() {
             <div className="space-y-6">
               <h3 className="text-xl text-amber-400">
                 Generation {selectedGeneration + 1} •{" "}
-                {generations[selectedGeneration]?.timestamp}
+                {generations[selectedGeneration]?.timestamp || ""}
               </h3>
+
               <div className="grid grid-cols-1 gap-4">
                 {evolvedWords.map((item, index) => (
                   <div
                     key={index}
-                    className="bg-zinc-900/70 border border-amber-500/30 p-5 rounded-2xl flex justify-between items-center"
+                    className="bg-zinc-900/70 border border-amber-500/30 p-6 rounded-2xl flex justify-between items-center"
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-4">
                         <button
                           onClick={() => speakWord(item.original, false)}
-                          className="text-zinc-400 hover:text-white transition-colors"
-                          title="Hear original form"
+                          className="text-zinc-400 hover:text-white transition-colors text-2xl"
+                          title="Hear original"
                         >
                           🔊
                         </button>
-                        <span className="font-mono text-xl line-through text-zinc-500">
+                        <span className="font-mono text-2xl line-through text-zinc-500">
                           {item.original}
                         </span>
-                        <span className="text-amber-400 mx-2">→</span>
-                        <span className="font-mono text-xl text-white">
+                        <span className="text-amber-400 mx-3 text-xl">→</span>
+                        <span className="font-mono text-2xl text-white">
                           {item.evolved}
                         </span>
                         <button
                           onClick={() => speakWord(item.evolved, true)}
-                          className="text-amber-400 hover:text-amber-300 transition-colors"
-                          title="Hear evolved form"
+                          className="text-amber-400 hover:text-amber-300 transition-colors text-2xl"
+                          title="Hear evolved"
                         >
                           🔊
                         </button>
                       </div>
                     </div>
-                    <span className="text-zinc-400">({item.meaning})</span>
+                    <span className="text-zinc-400 text-lg">
+                      ({item.meaning})
+                    </span>
                   </div>
                 ))}
               </div>
@@ -606,10 +631,13 @@ function App() {
           )}
 
           {generations.length === 0 && (
-            <p className="text-zinc-500 text-center py-12">
-              Click "Evolve 100 Years" to start growing your language family
-              tree
-            </p>
+            <div className="text-center py-20 text-zinc-500">
+              <div className="text-6xl mb-4">🌱</div>
+              <p className="text-xl">Your language family tree is empty</p>
+              <p className="mt-2">
+                Click "Evolve 100 Years" to begin growing it
+              </p>
+            </div>
           )}
         </motion.div>
 
