@@ -44,6 +44,7 @@ function App() {
   const [langName, setLangName] = useState("ProtoLingua");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [evolvedWords, setEvolvedWords] = useState<any[]>([]);
+  const [currentVocabulary, setCurrentVocabulary] = useState<Word[]>([]);
   const [phonemes, setPhonemes] = useState<Phoneme[]>([
     { symbol: "p", category: "consonant" },
     { symbol: "t", category: "consonant" },
@@ -144,16 +145,26 @@ function App() {
     }
   };
 
-  const evolveLanguage = async () => {
+  const evolveLanguage = async (fromCurrent = false) => {
     if (!langName.trim()) {
       setStatus("❌ Please save the proto-language first");
       return;
     }
 
+    let vocabToEvolve = vocabulary;
+
+    // If "Evolve Again" is clicked, use the latest evolved vocabulary
+    if (fromCurrent && currentVocabulary.length > 0) {
+      vocabToEvolve = currentVocabulary.map((item) => ({
+        form: item.form, // Use evolved form as new "original"
+        meaning: item.meaning,
+      }));
+    }
+
     const payload = {
       name: langName.trim(),
       phonemes,
-      vocabulary,
+      vocabulary: vocabToEvolve,
       rules,
     };
 
@@ -167,9 +178,17 @@ function App() {
 
       if (data.evolved_vocabulary) {
         setEvolvedWords(data.evolved_vocabulary);
-        setStatus(
-          `✅ Evolution complete! ${data.evolved_vocabulary.length} words updated.`,
+
+        // Update current vocabulary for next evolution
+        setCurrentVocabulary(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          data.evolved_vocabulary.map((item: any) => ({
+            form: item.evolved,
+            meaning: item.meaning,
+          })),
         );
+
+        setStatus(`✅ Evolution complete! Generation ${data.generation || 1}`);
       }
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
@@ -446,7 +465,7 @@ function App() {
           </p>
         </motion.div>
 
-        {/* Evolution Results Section */}
+        {/* Evolution Results Section - with two buttons */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -461,12 +480,23 @@ function App() {
             </h2>
           </div>
 
-          <button
-            onClick={evolveLanguage}
-            className="mb-8 bg-amber-600 hover:bg-amber-500 px-10 py-4 rounded-2xl flex items-center gap-3 text-lg font-medium transition-all active:scale-95"
-          >
-            <Play size={24} /> Evolve 100 Years
-          </button>
+          {/* Two buttons side by side */}
+          <div className="flex gap-4 mb-8">
+            <button
+              onClick={() => evolveLanguage(false)} // First evolution from original
+              className="flex-1 bg-amber-600 hover:bg-amber-500 px-10 py-4 rounded-2xl flex items-center justify-center gap-3 text-lg font-medium transition-all active:scale-95"
+            >
+              <Play size={24} /> Evolve 100 Years
+            </button>
+
+            <button
+              onClick={() => evolveLanguage(true)} // Continue from current state
+              disabled={evolvedWords.length === 0}
+              className="flex-1 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 px-10 py-4 rounded-2xl flex items-center justify-center gap-3 text-lg font-medium transition-all active:scale-95"
+            >
+              Evolve Again
+            </button>
+          </div>
 
           {evolvedWords.length > 0 && (
             <div className="space-y-6">
