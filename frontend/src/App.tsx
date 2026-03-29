@@ -214,6 +214,60 @@ function App() {
     setStatus("Evolution tree reset. Ready for new simulation.");
   };
 
+  const loadLatinExample = () => {
+    // Latin phonemes
+    setPhonemes([
+      { symbol: "p", category: "consonant" },
+      { symbol: "t", category: "consonant" },
+      { symbol: "k", category: "consonant" },
+      { symbol: "b", category: "consonant" },
+      { symbol: "d", category: "consonant" },
+      { symbol: "g", category: "consonant" },
+      { symbol: "m", category: "consonant" },
+      { symbol: "n", category: "consonant" },
+      { symbol: "s", category: "consonant" },
+      { symbol: "l", category: "consonant" },
+      { symbol: "r", category: "consonant" },
+      { symbol: "a", category: "vowel" },
+      { symbol: "e", category: "vowel" },
+      { symbol: "i", category: "vowel" },
+      { symbol: "o", category: "vowel" },
+      { symbol: "u", category: "vowel" },
+    ]);
+
+    // Famous Latin starter vocabulary (good for showing evolution)
+    setVocabulary([
+      { form: "pater", meaning: "father" },
+      { form: "mater", meaning: "mother" },
+      { form: "frater", meaning: "brother" },
+      { form: "noctem", meaning: "night" },
+      { form: "lactem", meaning: "milk" },
+      { form: "cantare", meaning: "to sing" },
+      { form: "caballum", meaning: "horse" },
+      { form: "vinum", meaning: "wine" },
+      { form: "aqua", meaning: "water" },
+      { form: "domus", meaning: "house" },
+    ]);
+
+    // Realistic Latin sound changes (simplified but educational)
+    setRules([
+      { before: "p", after: "f", environment: "_V" }, // p → f before vowel (like in French)
+      { before: "t", after: "d", environment: "V_" }, // intervocalic t → d
+      { before: "k", after: "ʃ", environment: "_V" }, // k → sh/ch sound (like in French/Spanish)
+      { before: "ct", after: "t", environment: "" }, // ct → t (noctem → nuit)
+      { before: "gn", after: "ɲ", environment: "" }, // gn → ny sound
+    ]);
+
+    setLangName("Latin");
+    setGenerations([]);
+    setEvolvedWords([]);
+    setSelectedGeneration(0);
+
+    setStatus(
+      "✅ Latin example loaded! Click 'Evolve 100 Years' to see it turn into Romance languages.",
+    );
+  };
+
   // Speak a word using browser TTS
   const speakWord = (word: string, isEvolved: boolean = false) => {
     if (!("speechSynthesis" in window)) {
@@ -572,6 +626,19 @@ function App() {
                 Export Language
               </button>
             </div>
+          </div>
+
+          {/* Example Loader */}
+          <div className="mb-6">
+            <button
+              onClick={loadLatinExample}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-8 py-4 rounded-2xl flex items-center justify-center gap-3 text-lg font-medium transition-all active:scale-95"
+            >
+              📜 Load Latin → Romance Languages Example
+            </button>
+            <p className="text-xs text-zinc-500 text-center mt-2">
+              See how real historical evolution works
+            </p>
           </div>
 
           {/* Evolution Buttons */}
