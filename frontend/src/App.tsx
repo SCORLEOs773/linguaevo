@@ -196,6 +196,37 @@ function App() {
     }
   };
 
+  // Speak a word using browser TTS
+  const speakWord = (word: string, isEvolved: boolean = false) => {
+    if (!("speechSynthesis" in window)) {
+      alert("Your browser doesn't support text-to-speech.");
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(word);
+
+    // Make evolved version sound slightly different (older/future feel)
+    if (isEvolved) {
+      utterance.pitch = 1.1; // slightly higher pitch
+      utterance.rate = 0.95; // slightly slower
+    } else {
+      utterance.pitch = 1.0;
+      utterance.rate = 1.05;
+    }
+
+    // Try to use a nice voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const goodVoice = voices.find(
+      (v) =>
+        v.name.includes("Google") ||
+        v.name.includes("Samantha") ||
+        v.lang.startsWith("en"),
+    );
+    if (goodVoice) utterance.voice = goodVoice;
+
+    window.speechSynthesis.speak(utterance);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-slate-950 to-black overflow-hidden relative">
       <div className="absolute inset-0 bg-[radial-gradient(#22c55e_0.8px,transparent_1px)] bg-[length:50px_50px] opacity-10" />
@@ -465,7 +496,7 @@ function App() {
           </p>
         </motion.div>
 
-        {/* Evolution Results Section - with two buttons */}
+        {/* Evolution Results Section */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -480,17 +511,16 @@ function App() {
             </h2>
           </div>
 
-          {/* Two buttons side by side */}
           <div className="flex gap-4 mb-8">
             <button
-              onClick={() => evolveLanguage(false)} // First evolution from original
+              onClick={() => evolveLanguage(false)}
               className="flex-1 bg-amber-600 hover:bg-amber-500 px-10 py-4 rounded-2xl flex items-center justify-center gap-3 text-lg font-medium transition-all active:scale-95"
             >
               <Play size={24} /> Evolve 100 Years
             </button>
 
             <button
-              onClick={() => evolveLanguage(true)} // Continue from current state
+              onClick={() => evolveLanguage(true)}
               disabled={evolvedWords.length === 0}
               className="flex-1 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 px-10 py-4 rounded-2xl flex items-center justify-center gap-3 text-lg font-medium transition-all active:scale-95"
             >
@@ -507,14 +537,30 @@ function App() {
                     key={index}
                     className="bg-zinc-900/70 border border-amber-500/30 p-5 rounded-2xl flex justify-between items-center"
                   >
-                    <div>
-                      <span className="font-mono text-xl line-through text-zinc-500">
-                        {item.original}
-                      </span>
-                      <span className="mx-4 text-amber-400">→</span>
-                      <span className="font-mono text-xl text-white">
-                        {item.evolved}
-                      </span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4">
+                        <button
+                          onClick={() => speakWord(item.original, false)}
+                          className="text-zinc-400 hover:text-white transition-colors"
+                          title="Hear original"
+                        >
+                          🔊
+                        </button>
+                        <span className="font-mono text-xl line-through text-zinc-500">
+                          {item.original}
+                        </span>
+                        <span className="text-amber-400">→</span>
+                        <span className="font-mono text-xl text-white">
+                          {item.evolved}
+                        </span>
+                        <button
+                          onClick={() => speakWord(item.evolved, true)}
+                          className="text-amber-400 hover:text-amber-300 transition-colors"
+                          title="Hear evolved"
+                        >
+                          🔊
+                        </button>
+                      </div>
                     </div>
                     <span className="text-zinc-400">({item.meaning})</span>
                   </div>
