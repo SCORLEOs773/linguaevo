@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Save, Play } from "lucide-react";
+import { Plus, Trash2, Save, Play, HelpCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Phoneme {
@@ -81,6 +81,22 @@ function App() {
   const [status, setStatus] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  const [showOnboarding, setShowOnboarding] = useState(true);
+
+  // Multi-pass selector (centuries → passes)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [passes, setPasses] = useState(3); // 3 passes ≈ 100 years
+
+  const [selectedTime, setSelectedTime] = useState<"100" | "300" | "500">(
+    "100",
+  );
+
+  const getPasses = () => {
+    if (selectedTime === "100") return 3;
+    if (selectedTime === "300") return 6;
+    return 9; // 500 years
+  };
+
   const addPhoneme = () => {
     if (!newPhoneme.trim()) return;
     if (phonemes.some((p) => p.symbol === newPhoneme.trim())) return;
@@ -157,8 +173,9 @@ function App() {
     }
 
     setIsEvolving(true);
-    let vocabToUse = vocabulary;
+    const passes = getPasses();
 
+    let vocabToUse = vocabulary;
     if (continueFromCurrent && generations.length > 0) {
       const latest = generations[generations.length - 1];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -176,32 +193,35 @@ function App() {
     };
 
     try {
-      const res = await fetch("http://localhost:8000/api/proto/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        `http://localhost:8000/api/proto/create?passes=${passes}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
       const data = await res.json();
 
       if (data.evolved_vocabulary) {
-        const newGeneration = {
+        const newGen = {
           generation: generations.length + 1,
           evolved_vocabulary: data.evolved_vocabulary,
           timestamp: new Date().toLocaleTimeString(),
         };
 
-        const updatedGenerations = [...generations, newGeneration];
-        setGenerations(updatedGenerations);
+        const updated = [...generations, newGen];
+        setGenerations(updated);
         setEvolvedWords(data.evolved_vocabulary);
-        setSelectedGeneration(updatedGenerations.length - 1);
+        setSelectedGeneration(updated.length - 1);
 
         setStatus(
-          `✅ Generation ${newGeneration.generation} created successfully!`,
+          `✅ Generation ${newGen.generation} created (${selectedTime} years simulation)`,
         );
       }
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
-      setStatus("❌ Could not connect to evolution engine.");
+      setStatus("❌ Could not connect to backend.");
     } finally {
       setIsEvolving(false);
     }
@@ -262,9 +282,9 @@ function App() {
     setGenerations([]);
     setEvolvedWords([]);
     setSelectedGeneration(0);
-
+    setShowOnboarding(false);
     setStatus(
-      "✅ Latin example loaded! Click 'Evolve 100 Years' to see it turn into Romance languages.",
+      "✅ Latin example loaded! Now click 'Evolve 100 Years' to see real historical evolution.",
     );
   };
 
@@ -329,6 +349,93 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-slate-950 to-black overflow-hidden relative">
+      {/* Onboarding Modal */}
+      <AnimatePresence>
+        {showOnboarding && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-zinc-900 rounded-3xl max-w-2xl w-full mx-4 p-8 shadow-2xl"
+            >
+              <h1 className="text-4xl font-bold text-center mb-2 text-emerald-400">
+                🌍 LinguaEvo
+              </h1>
+              <p className="text-center text-zinc-400 mb-8">
+                Evolutionary Language Simulator
+              </p>
+
+              <div className="space-y-6 text-zinc-300">
+                <div>
+                  <strong>What is this?</strong>
+                  <br />A tool that lets you create a starting language and
+                  watch it evolve naturally over time, just like real languages
+                  (Latin → French/Spanish/Italian).
+                </div>
+
+                <div>
+                  <strong>How to use it:</strong>
+                  <ol className="list-decimal pl-5 mt-2 space-y-1">
+                    <li>
+                      Fill <strong>Phoneme Inventory</strong>,{" "}
+                      <strong>Starter Vocabulary</strong>, and{" "}
+                      <strong>Sound Change Rules</strong>
+                    </li>
+                    <li>
+                      Click <strong>“Load Latin Example”</strong> to see real
+                      historical evolution in action
+                    </li>
+                    <li>
+                      Choose how many years to simulate using the{" "}
+                      <strong>100 / 300 / 500 years</strong> buttons
+                    </li>
+                    <li>
+                      Click <strong>“Evolve X Years”</strong> to advance time
+                    </li>
+                    <li>
+                      Use the speaker icons 🔊 to hear words at different stages
+                    </li>
+                    <li>
+                      Switch between generations using the tree buttons above
+                      the words
+                    </li>
+                  </ol>
+                </div>
+
+                <div className="bg-zinc-800/50 p-4 rounded-2xl text-sm">
+                  <strong>💡 Tip:</strong> More years = bigger changes. Start
+                  with 100 years to see gradual evolution, then use "Evolve
+                  Again" to continue.
+                </div>
+              </div>
+
+              <div className="flex gap-4 mt-10">
+                <button
+                  onClick={() => {
+                    setShowOnboarding(false);
+                    loadLatinExample();
+                  }}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 py-4 rounded-2xl text-lg font-medium"
+                >
+                  Try Latin → Romance Example
+                </button>
+                <button
+                  onClick={() => setShowOnboarding(false)}
+                  className="flex-1 bg-zinc-700 hover:bg-zinc-600 py-4 rounded-2xl text-lg font-medium"
+                >
+                  Start with Blank Language
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="absolute inset-0 bg-[radial-gradient(#22c55e_0.8px,transparent_1px)] bg-[length:50px_50px] opacity-10" />
 
       <div className="relative z-10 max-w-6xl mx-auto p-8">
@@ -343,13 +450,19 @@ function App() {
               <span className="text-5xl">🌌</span>
             </div>
             <div>
-              <h1 className="text-6xl font-bold bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent tracking-tighter">
+              <h1 className="text-6xl pb-3 font-bold bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent tracking-tighter">
                 LinguaEvo
               </h1>
               <p className="text-xl text-zinc-400 mt-1">
                 Evolutionary Language Laboratory
               </p>
             </div>
+            <button
+              onClick={() => setShowOnboarding(true)}
+              className="text-zinc-400 hover:text-white"
+            >
+              <HelpCircle size={28} />
+            </button>
           </div>
           <div className="text-emerald-400 text-sm font-mono">
             v0.1 • PROTO CREATOR
@@ -365,7 +478,7 @@ function App() {
             type="text"
             value={langName}
             onChange={(e) => setLangName(e.target.value)}
-            className="w-full max-w-lg bg-zinc-900/70 backdrop-blur-xl border border-zinc-700 focus:border-emerald-500 rounded-3xl px-8 py-5 text-3xl font-light outline-none"
+            className="w-full max-w-lg text-emerald-400 bg-zinc-900/70 backdrop-blur-xl border border-zinc-700 focus:border-emerald-500 rounded-3xl px-8 py-5 text-3xl font-light outline-none"
             placeholder="e.g. Eldari, Zenthari..."
           />
         </div>
@@ -421,7 +534,7 @@ function App() {
                 value={newPhoneme}
                 onChange={(e) => setNewPhoneme(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addPhoneme()}
-                className="flex-1 bg-zinc-900/70 border border-zinc-700 focus:border-cyan-400 rounded-2xl px-6 py-4 text-lg outline-none"
+                className="flex-1 text-white bg-zinc-900/70 border border-zinc-700 focus:border-cyan-400 rounded-2xl px-6 py-4 text-lg outline-none"
               />
               <select
                 value={newPhonemeCat}
@@ -502,13 +615,13 @@ function App() {
                 placeholder="Word (kata)"
                 value={newWordForm}
                 onChange={(e) => setNewWordForm(e.target.value)}
-                className="flex-1 bg-zinc-900/70 border border-zinc-700 focus:border-cyan-400 rounded-2xl px-2 py-4 outline-none"
+                className="flex-1 text-white bg-zinc-900/70 border border-zinc-700 focus:border-cyan-400 rounded-2xl px-2 py-4 outline-none"
               />
               <input
                 placeholder="Meaning (house)"
                 value={newWordMeaning}
                 onChange={(e) => setNewWordMeaning(e.target.value)}
-                className="flex-1 bg-zinc-900/70 border border-zinc-700 focus:border-cyan-400 rounded-2xl px-2 py-4 outline-none"
+                className="flex-1 text-white bg-zinc-900/70 border border-zinc-700 focus:border-cyan-400 rounded-2xl px-2 py-4 outline-none"
               />
               <button
                 onClick={addWord}
@@ -569,20 +682,20 @@ function App() {
               placeholder="Before"
               value={newRuleBefore}
               onChange={(e) => setNewRuleBefore(e.target.value)}
-              className="w-32 bg-zinc-900/70 border border-zinc-700 focus:border-purple-400 rounded-2xl px-6 py-4 text-center font-mono text-xl"
+              className="w-32 text-white bg-zinc-900/70 border border-zinc-700 focus:border-purple-400 rounded-2xl px-6 py-4 text-center font-mono text-xl"
             />
             <div className="flex items-center text-3xl text-zinc-600">→</div>
             <input
               placeholder="After"
               value={newRuleAfter}
               onChange={(e) => setNewRuleAfter(e.target.value)}
-              className="w-32 bg-zinc-900/70 border border-zinc-700 focus:border-purple-400 rounded-2xl px-6 py-4 text-center font-mono text-xl"
+              className="w-32 text-white bg-zinc-900/70 border border-zinc-700 focus:border-purple-400 rounded-2xl px-6 py-4 text-center font-mono text-xl"
             />
             <input
               placeholder="Environment (optional)"
               value={newRuleEnv}
               onChange={(e) => setNewRuleEnv(e.target.value)}
-              className="flex-1 bg-zinc-900/70 border border-zinc-700 focus:border-purple-400 rounded-2xl px-6 py-4"
+              className="flex-1 text-white bg-zinc-900/70 border border-zinc-700 focus:border-purple-400 rounded-2xl px-6 py-4"
             />
             <button
               onClick={addRule}
@@ -641,24 +754,47 @@ function App() {
             </p>
           </div>
 
-          {/* Evolution Buttons */}
-          <div className="flex gap-4 mb-8">
-            <button
-              onClick={() => evolveLanguage(false)}
-              disabled={isEvolving}
-              className="flex-1 bg-amber-600 hover:bg-amber-500 disabled:opacity-70 px-10 py-4 rounded-2xl flex items-center justify-center gap-3 text-lg font-medium transition-all active:scale-95"
-            >
-              <Play size={24} />
-              {isEvolving ? "Evolving..." : "Evolve 100 Years (New Branch)"}
-            </button>
+          {/* Time Selector + Buttons */}
+          <div className="mb-8">
+            <p className="text-zinc-400 mb-3 text-sm">
+              Simulate how many years:
+            </p>
+            <div className="flex gap-2 mb-6">
+              {["100", "300", "500"].map((years) => (
+                <button
+                  key={years}
+                  onClick={() =>
+                    setSelectedTime(years as "100" | "300" | "500")
+                  }
+                  className={`flex-1 py-3 rounded-2xl text-sm font-medium transition-all ${
+                    selectedTime === years
+                      ? "bg-amber-600 text-black"
+                      : "bg-zinc-800 hover:bg-zinc-700 text-zinc-300"
+                  }`}
+                >
+                  {years} years
+                </button>
+              ))}
+            </div>
 
-            <button
-              onClick={() => evolveLanguage(true)}
-              disabled={isEvolving || generations.length === 0}
-              className="flex-1 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 px-10 py-4 rounded-2xl flex items-center justify-center gap-3 text-lg font-medium transition-all active:scale-95"
-            >
-              {isEvolving ? "Evolving..." : "Evolve Current Branch"}
-            </button>
+            <div className="flex gap-4">
+              <button
+                onClick={() => evolveLanguage(false)}
+                disabled={isEvolving}
+                className="flex-1 bg-amber-600 hover:bg-amber-500 disabled:opacity-70 px-10 py-4 rounded-2xl flex items-center justify-center gap-3 text-lg font-medium transition-all active:scale-95"
+              >
+                <Play size={24} />
+                {isEvolving ? "Evolving..." : `Evolve ${selectedTime} Years`}
+              </button>
+
+              <button
+                onClick={() => evolveLanguage(true)}
+                disabled={isEvolving || generations.length === 0}
+                className="flex-1 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 px-10 py-4 rounded-2xl flex items-center justify-center gap-3 text-lg font-medium transition-all active:scale-95"
+              >
+                {isEvolving ? "Evolving..." : "Evolve Again"}
+              </button>
+            </div>
           </div>
 
           {/* Generation Navigation */}
