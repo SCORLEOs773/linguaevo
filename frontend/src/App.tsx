@@ -44,7 +44,9 @@ function App() {
   const [langName, setLangName] = useState("ProtoLingua");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [evolvedWords, setEvolvedWords] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentVocabulary, setCurrentVocabulary] = useState<Word[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [generations, setGenerations] = useState<any[]>([]); // array of evolution stages
   const [selectedGeneration, setSelectedGeneration] = useState<number>(0);
   const [phonemes, setPhonemes] = useState<Phoneme[]>([
